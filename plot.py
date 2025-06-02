@@ -170,7 +170,7 @@ def plot_correlation_heatmap(correlation_matrix, title="Pearson Correlation Map"
     plt.xticks(fontsize=10)
     plt.yticks(fontsize=10)
     plt.tight_layout()
-    plt.savefig(f'./plots/{title}.pdf', dpi=300, format='pdf')
+    # plt.savefig(f'./plots/{title}.pdf', dpi=300, format='pdf')
     plt.show()
 
 
@@ -188,35 +188,31 @@ if __name__ == "__main__":
     for j in range(1, W):
         example_tensor[:, :, j] = example_tensor[:, :, j] * 0.7 + example_tensor[:, :, j-1] * 0.3
 
-
+    mode = 'shifted'
+    """
+    calculate mode:
+    'shifted': used in paper `Transformer-based Transform Coding`, tend to be slower,
+    'simple': more general spatial correlation to the center point
+    """
     # 2. Set parameters
     center_y, center_x = H // 2, W // 2  # e.g., (16, 16)
     window_size = 5  # Look at a 5x5 neighborhood
 
     # 3. Calculate the correlation matrix
-    correlation_matrix = calculate_spatial_correlation_from_single_tensor(
+    if mode == 'simple':
+        correlation_matrix = calculate_spatial_correlation_from_single_tensor(
         example_tensor, center_y, center_x, window_size
     )
+    elif mode == 'shifted':
+        correlation_matrix = calculate_average_spatial_autocorrelation_map(example_tensor, window_size)
+    else:
+        raise NotImplementedError
 
     print(f"Calculated {window_size}x{window_size} correlation map with center at ({center_y}, {center_x}):")
     print(correlation_matrix)
 
-    # 4. Plot the heatmap
-    # You might need to adjust vmin_val and vmax_val based on the actual value range of correlation_matrix
-    # For example, if the correlation values are generally small, you can set vmax_val to a smaller value (e.g., 0.1 or 0.2)
-    # to make the color variation more apparent. If the center point is 1 and other points are very small,
-    # you can set an upper limit to show the details of these small values.
-    # In the example plot, vmax is about 0.04, here we adjust automatically first, then you can set it manually based on the output.
     plot_correlation_heatmap(correlation_matrix,
                             title=f"Spatial Correlation",
                             vmin_val=0.0, # Generally better to start from 0 when correlation is non-negative
-                            # vmax_val=0.1 # You can uncomment and manually set an upper limit to observe details
                             )
 
-    # If you want to simulate the effect of the example plot on the right (SwinT Hyperprior), its color bar maximum is about 0.04
-    # simulated_swint_vmax = 0.04
-    # plot_correlation_heatmap(correlation_matrix,
-    #                          title=f"Spatial Correlation (Channels as Samples)\nCenter: ({center_y},{center_x}), Window: {window_size}x{window_size}",
-    #                          vmin_val=0.0,
-    #                          vmax_val=simulated_swint_vmax
-    #                         )
